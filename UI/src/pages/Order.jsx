@@ -12,31 +12,31 @@ const Order = () => {
 
   const renderOrderItem = ({ item }) => (
     <View style={styles.mainView}>
-      
-      <View style={styles.orderItem}>
-          <View style={styles.leftView}>
-            <Text style={styles.orderDate}>Date: {item.date_created ? new Date(item.date_created).toLocaleDateString() : 'N/A'}</Text>
-            <Text style={styles.orderId}>Order ID: {item.id}</Text>
-            <Text style={styles.orderName}>Customer: {item.billing?.first_name} {item.billing?.last_name}</Text>
-          </View>
 
-          <View style={styles.rightView}>
-            <View style={styles.rightRow}>
-              <Text style={styles.rightLabel}>SKU:</Text>
-              <Text style={styles.rightValue}>
-                {item.line_items && item.line_items.length > 0 ? 
-                  item.line_items.map(lineItem => lineItem.sku).filter(sku => sku).join(', ') : ''}
-              </Text>
-            </View>
-            <View style={styles.rightRow}>
-              <Text style={styles.totalLabel}>Total:</Text>
-              <Text style={[styles.totalValue, {color: '#007bff'}]}>{item.total}</Text>
-            </View>
-            <View style={styles.rightRow}>
-              <Text style={styles.rightLabel}>Status:</Text>
-              <Text style={styles.rightValue}>{item.status}</Text>
-            </View>
+      <View style={styles.orderItem}>
+        <View style={styles.leftView}>
+          <Text style={styles.orderDate}>Date: {item.date_created ? new Date(item.date_created).toLocaleDateString() : 'N/A'}</Text>
+          <Text style={styles.orderId}>Order ID: {item.id}</Text>
+          <Text style={styles.orderName}>Customer: {item.billing?.first_name} {item.billing?.last_name}</Text>
+        </View>
+
+        <View style={styles.rightView}>
+          <View style={styles.rightRow}>
+            <Text style={styles.rightLabel}>SKU:</Text>
+            <Text style={styles.rightValue}>
+              {item.line_items && item.line_items.length > 0 ?
+                item.line_items.map(lineItem => lineItem.sku).filter(sku => sku).join(', ') : ''}
+            </Text>
           </View>
+          <View style={styles.rightRow}>
+            <Text style={styles.totalLabel}>Total:</Text>
+            <Text style={[styles.totalValue, { color: '#007bff' }]}>{item.total}</Text>
+          </View>
+          <View style={styles.rightRow}>
+            <Text style={styles.rightLabel}>Status:</Text>
+            <Text style={styles.rightValue}>{item.status}</Text>
+          </View>
+        </View>
       </View>
     </View>
   );
@@ -60,7 +60,6 @@ const Order = () => {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Orders</Text>
       {orders.length === 0 ? (
         <View style={styles.centered}>
           <Text>No orders found.</Text>
@@ -82,7 +81,7 @@ export default Order;
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    padding: 16,
+    padding: 12,
     backgroundColor: '#f8f8f8',
   },
   centered: {

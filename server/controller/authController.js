@@ -5,13 +5,13 @@ import bcrypt from 'bcryptjs';
 export const signup = async (req, res) => {
     const { email, password } = req.body;
     try {
-        if ( !email || !password)
-            return res.status(400).json('!!Provide all fields')
+        if (!email || !password)
+            return res.status(400).json({ message: '!!Provide all fields' })
         if (password.length < 6)
-            return res.status(400).json('!!Password must be at least 6 caarecther');
+            return res.status(400).json({ message: '!!Password must be at least 6 characters' });
         const user = await User.findOne({ email });
         if (user)
-            return res.status(400).json('!!Email already exists');
+            return res.status(400).json({ message: '!!Email already exists' });
 
         const salt = await bcrypt.genSalt(10);
         const hashedPassword = await bcrypt.hash(password, salt);
@@ -31,12 +31,12 @@ export const signup = async (req, res) => {
             });
         }
         else {
-            return res.status(400).json('!!Invalid User data');
+            return res.status(400).json({ message: '!!Invalid User data' });
         }
 
     } catch (error) {
         console.log('Error during Signup');
-        return res.status(400).json('!!Internal server error');
+        return res.status(400).json({ message: '!!Internal server error' });
     }
 };
 
@@ -44,17 +44,17 @@ export const login = async (req, res) => {
     const { email, password } = req.body;
     try {
         if (!email || !password)
-            return res.status(400).json({message: '!!Provide all fields'})
+            return res.status(400).json({ message: '!!Provide all fields' })
         const user = await User.findOne({ email });
 
         if (!user)
-            return res.status(400).json({message: 'User not found'})
+            return res.status(400).json({ message: 'User not found' })
         const isPassOK = await bcrypt.compare(password, user.password);
 
         if (!isPassOK)
-            return res.status(400).json({message:'!!Wrong Password,try again'});
+            return res.status(400).json({ message: '!!Wrong Password,try again' });
 
-        generateToken(user._id, res);
+        //generateToken(user._id, res);
         res.status(200).json({
             _id: user._id,
             name: user.name,
@@ -62,7 +62,7 @@ export const login = async (req, res) => {
         });
     } catch (error) {
         console.log('Error while login');
-        return res.status(400).json({message:'!!Internal server error'});
+        return res.status(400).json({ message: '!!Internal server error' });
     }
 
 };

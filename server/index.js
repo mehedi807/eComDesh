@@ -12,12 +12,12 @@ const PORT = process.env.PORT;
 app.use(express.json());
 //app.use(cookieParser());
 app.use(cors({
-    origin: "http://localhost:8081",
+    origin: true,
     credentials: true,
 }
 ))
 
- app.use('/api/auth', authRoute);
+app.use('/api/auth', authRoute);
 // app.use('/api/account', accountsRoute);
 // app.use('/api/record', recordsRoute);
 // app.use('/api/budget', budgetRoute);

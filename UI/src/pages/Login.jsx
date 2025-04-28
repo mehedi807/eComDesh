@@ -52,7 +52,7 @@ const Login = () => {
     try {
       const success = await login(data);
       if (success) {
-        natigator.replace("Home");
+        natigator.replace("MainTabs");
       }
     } finally {
       setLoading(false);

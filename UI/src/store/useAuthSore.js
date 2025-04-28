@@ -2,8 +2,8 @@
 import { create } from "zustand";
 import { persist, createJSONStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { axiosInstancenode } from "../lib/axios";
 import { Alert } from "react-native";
+import { nodeApi } from "../lib/axios";
 
 
 export const useAuthStore = create(
@@ -29,7 +29,7 @@ export const useAuthStore = create(
             signup: async (data) => {
                 set({ isloading: true })
                 try {
-                    const res = await axiosInstancenode.post("/auth/signup", data);
+                    const res = await nodeApi.post("/auth/signup", data);
                     set({ authUser: res.data });
                     Alert.alert("Success", "Account created successfully");
                     console.log(res.data);
@@ -45,7 +45,7 @@ export const useAuthStore = create(
             login: async (data) => {
                 set({ isloading: true })
                 try {
-                    const res = await axiosInstancenode.post("/auth/login", data);
+                    const res = await nodeApi.post("/auth/login", data);
                     set({ authUser: res.data });
                     Alert.alert("Success", "Logged In successfully");
                     console.log(res.data);
@@ -63,7 +63,7 @@ export const useAuthStore = create(
             logout: async () => {
                 set({ isloading: true })
                 try {
-                    await axiosInstancenode.post('/auth/logout');
+                    await nodeApi.post('/auth/logout');
                     set({ authUser: null });
                     Alert.alert("Success", "Logged out Successful");
                 } catch (error) {
@@ -75,9 +75,9 @@ export const useAuthStore = create(
             },
         }),
         {
-            name: 'auth-storage', 
-            storage: createJSONStorage(() => AsyncStorage), 
-            partialize: (state) => ({ authUser: state.authUser }), 
+            name: 'auth-storage',
+            storage: createJSONStorage(() => AsyncStorage),
+            partialize: (state) => ({ authUser: state.authUser }),
         }
     )
 )
