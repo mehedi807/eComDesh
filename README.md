@@ -42,8 +42,8 @@ Make sure you have the following installed on your machine:
     ```
 ## Installing packages
 
-Use this command to install packages to avoid conflicts
+    Use this command to install packages to avoid conflicts
 
-```bash
-    npx expo install <package name>
-``` 
+    ```bash
+        npx expo install <package name>
+    ``` 
