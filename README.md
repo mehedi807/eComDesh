@@ -40,10 +40,10 @@ Make sure you have the following installed on your machine:
     ```bash
     npx expo start
     ```
-## Installing packages
+### Installing UI Packages (Expo)
 
-    Use this command to install packages to avoid conflicts
+When adding new packages use this command to ensure compatibility with Expo.
 
-    ```bash
-        npx expo install <package name>
-    ``` 
+```bash
+npx expo install <package-name>
+```
