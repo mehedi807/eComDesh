@@ -1,44 +1,145 @@
-import { StyleSheet, Text, View, FlatList, ActivityIndicator, TouchableOpacity } from 'react-native';
-import React, { useEffect } from 'react';
+import { StyleSheet, Text, View, FlatList, ActivityIndicator, TouchableOpacity, Modal, Button, SafeAreaView } from 'react-native';
+import { Picker } from '@react-native-picker/picker';
+import React, { useEffect, useState } from 'react';
 import useOrderStore from '../store/useOrderStore';
-import { FontAwesome } from '@expo/vector-icons'; // Using FontAwesome icons
-
+import { BlurView } from 'expo-blur';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { FontAwesome } from '@expo/vector-icons';
+import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 const Order = () => {
   const { orders, loading, error, fetchOrders } = useOrderStore();
+  const [modalVisible, setModalVisible] = useState(false);
+  const [selectedOrder, setSelectedOrder] = useState(null);
+
 
   useEffect(() => {
     fetchOrders();
   }, [fetchOrders]);
 
+  const handleStatusChange = (orderId, newStatus) => {
+    console.log(`Order ${orderId} changed to status: ${newStatus}`);
+  };
+
   const renderOrderItem = ({ item }) => (
-    <View style={styles.mainView}>
+    <>
+      <TouchableOpacity onPress={() => {
+        setModalVisible(true);
+        setSelectedOrder(item);
+      }}>
+        <View style={styles.mainView}>
 
-      <View style={styles.orderItem}>
-        <View style={styles.leftView}>
-          <Text style={styles.orderDate}>Date: {item.date_created ? new Date(item.date_created).toLocaleDateString() : 'N/A'}</Text>
-          <Text style={styles.orderId}>Order ID: {item.id}</Text>
-          <Text style={styles.orderName}>Customer: {item.billing?.first_name} {item.billing?.last_name}</Text>
-        </View>
+          <View style={styles.orderItem}>
 
-        <View style={styles.rightView}>
-          <View style={styles.rightRow}>
-            <Text style={styles.rightLabel}>SKU:</Text>
-            <Text style={styles.rightValue}>
-              {item.line_items && item.line_items.length > 0 ?
-                item.line_items.map(lineItem => lineItem.sku).filter(sku => sku).join(', ') : ''}
-            </Text>
+            <View style={styles.leftView}>
+              <Text style={styles.orderDate}>Date: {item.date_created ? new Date(item.date_created).toLocaleDateString() : 'N/A'}</Text>
+              <Text style={styles.orderId}>Order ID: {item.id}</Text>
+              <Text style={styles.orderName}>Customer: {item.billing?.first_name} {item.billing?.last_name}</Text>
+              <View style={styles.rightRow}>
+                <View style={styles.statusContainer}>
+                  <Text style={styles.rightLabel}>Status:</Text>
+                  <Picker
+                    selectedValue={item.status}
+                    style={styles.picker}
+                    onValueChange={(value) => handleStatusChange(item.id, value)}
+                    mode="dropdown"
+                  >
+                    <Picker.Item label="Pending" value="pending" />
+                    <Picker.Item label="Completed" value="completed" />
+                    <Picker.Item label="Cancelled" value="cancelled" />
+                    <Picker.Item label="Refunded" value="refunded" />
+                  </Picker>
+                </View>
+              </View>
+            </View>
+
+            <View style={styles.rightView}>
+              <View style={styles.rightRow}>
+                <Text style={styles.rightLabel}>SKU:</Text>
+                <Text style={styles.rightValue}>
+                  {item.line_items && item.line_items.length > 0 ?
+                    item.line_items.map(lineItem => lineItem.sku).filter(sku => sku).join(', ') : ''}
+                </Text>
+              </View>
+
+              <View style={styles.rightRow}>
+                <Text style={styles.totalLabel}>Total:</Text>
+                <Text style={[styles.totalValue, { color: '#007bff' }]}>{item.total}</Text>
+              </View>
+
+            </View>
+
           </View>
-          <View style={styles.rightRow}>
-            <Text style={styles.totalLabel}>Total:</Text>
-            <Text style={[styles.totalValue, { color: '#007bff' }]}>{item.total}</Text>
-          </View>
-          <View style={styles.rightRow}>
-            <Text style={styles.rightLabel}>Status:</Text>
-            <Text style={styles.rightValue}>{item.status}</Text>
+
+        </View >
+
+      </TouchableOpacity>
+      <Modal
+        visible={modalVisible}
+        hardwareAccelerated={true}
+        animationType='fade'
+        transparent={true}
+        onRequestClose={() => {
+          setModalVisible(false);
+          setSelectedOrder(null);
+        }}
+      >
+        <View style={styles.modalBackground}>
+          <View style={styles.modalContainer}>
+            {selectedOrder && (
+              <>
+                <Text style={styles.orderDate}>
+                  Date: {selectedOrder.date_created ? new Date(selectedOrder.date_created).toLocaleDateString() : 'N/A'}
+                </Text>
+                <Text style={styles.orderId}>Order ID: {selectedOrder.id}</Text>
+                <Text style={styles.orderName}>
+                  Customer: {selectedOrder.billing?.first_name} {selectedOrder.billing?.last_name}
+                </Text>
+                <Text style={styles.orderEmail}>Email: {selectedOrder.billing?.email}</Text>
+                <Text style={styles.orderPhone}>Phone: {selectedOrder.billing?.phone}</Text>
+                <Text style={styles.orderAddress}>
+                  Address: {[selectedOrder.billing?.address_1, selectedOrder.billing?.address_2, selectedOrder.billing?.city, selectedOrder.billing?.state, selectedOrder.billing?.postcode, selectedOrder.billing?.country]
+                    .filter(Boolean).join(', ')}
+                </Text>
+
+                {/* Order Items Table */}
+                <Text style={styles.sectionTitle}>Order Items : </Text>
+                <View style={styles.tableHeader}>
+                  <Text style={styles.tableHeaderText}>Product</Text>
+                  <Text style={styles.tableHeaderText}>SKU</Text>
+                  <Text style={styles.tableHeaderText}>Qty</Text>
+                  <Text style={styles.tableHeaderText}>Price</Text>
+                  <Text style={styles.tableHeaderText}>Total</Text>
+                </View>
+
+                {selectedOrder.line_items?.map((item, index) => (
+                  <View key={index} style={styles.tableRow}>
+                    <Text style={styles.tableCell}>{item.name}</Text>
+                    <Text style={styles.tableCell}>{item.sku || '-'}</Text>
+                    <Text style={styles.tableCell}>{item.quantity}</Text>
+                    <Text style={styles.tableCell}>{item.price}</Text>
+                    <Text style={styles.tableCell}>
+                      {(parseFloat(item.quantity) * parseFloat(item.price)).toFixed(2)}
+                    </Text>
+                  </View>
+                ))}
+
+                <Button
+                  title="Close"
+                  onPress={() => {
+                    setModalVisible(false);
+                    setSelectedOrder(null);
+                  }}
+                />
+              </>
+            )}
           </View>
         </View>
-      </View>
-    </View>
+      </Modal>
+
+
+
+    </>
+
   );
 
   if (loading) {
@@ -59,20 +160,23 @@ const Order = () => {
   }
 
   return (
-    <View style={styles.container}>
-      {orders.length === 0 ? (
-        <View style={styles.centered}>
-          <Text>No orders found.</Text>
-        </View>
-      ) : (
-        <FlatList
-          data={orders}
-          renderItem={renderOrderItem}
-          keyExtractor={(item) => item.id.toString()}
-          contentContainerStyle={styles.listContent}
-        />
-      )}
-    </View>
+    <SafeAreaProvider>
+      <SafeAreaView style={styles.container}>
+        {orders.length === 0 ? (
+          <View style={styles.centered}>
+            <Text>No orders found.</Text>
+          </View>
+        ) : (
+          <FlatList
+            data={orders}
+            renderItem={renderOrderItem}
+            keyExtractor={(item) => item.id.toString()}
+            contentContainerStyle={styles.listContent}
+          />
+        )}
+      </SafeAreaView>
+    </SafeAreaProvider>
+
   );
 };
 
@@ -170,4 +274,75 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: 'bold'
   },
+
+  statusContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    //marginTop: 4,
+  },
+  picker: {
+    //fontSize: 4,
+    width: 160,
+    height: 55,
+    color: 'rgb(28, 122, 0)',
+  },
+
+  modalBackground: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.1)',
+  },
+  modalContainer: {
+    backgroundColor: 'white',
+    padding: 20,
+    borderRadius: 10,
+    width: '90%',
+    maxWidth: 400,
+  },
+  orderEmail: {
+    fontSize: 16,
+    marginTop: 4,
+  },
+  orderPhone: {
+    fontSize: 16,
+    marginTop: 4,
+  },
+  orderAddress: {
+    fontSize: 16,
+    marginTop: 4,
+  },
+  sectionTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    marginVertical: 10,
+  },
+
+  tableHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    borderBottomWidth: 1,
+    borderColor: '#ccc',
+    paddingVertical: 5,
+  },
+
+  tableHeaderText: {
+    flex: 1,
+    fontWeight: 'bold',
+    fontSize: 14,
+  },
+
+  tableRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingVertical: 4,
+    borderBottomWidth: 0.5,
+    borderColor: '#eee',
+  },
+
+  tableCell: {
+    flex: 1,
+    fontSize: 13,
+  },
+
 });

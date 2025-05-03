@@ -13,10 +13,10 @@ const wooApi = axios.create({
 });
 
 const nodeApi = axios.create({
-  baseURL: 'http://192.168.10.189:5001/api',
+  //baseURL: 'http://192.168.10.189:5001/api',   //on android
+  baseURL: 'http://localhost:5001/api',        //on local 
   withCredentials: true,
 });
 
 
 export { wooApi, nodeApi };
-//export default wooApi;
