@@ -1,152 +1,167 @@
-import { StyleSheet, Text, View, FlatList, ActivityIndicator, TouchableOpacity, Modal, Button, SafeAreaView } from 'react-native';
-import { Picker } from '@react-native-picker/picker';
+import { StyleSheet, Text, View, FlatList, ActivityIndicator, TouchableOpacity, Modal, SafeAreaView, TextInput, ScrollView } from 'react-native';
 import React, { useEffect, useState } from 'react';
 import useOrderStore from '../store/useOrderStore';
-import { BlurView } from 'expo-blur';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { FontAwesome } from '@expo/vector-icons';
-import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
+import OrderModelView from '../components/OrderModelView';
+import StatusDropdown from '../components/StatusDropdown';
+
+
 const Order = () => {
   const { orders, loading, error, fetchOrders } = useOrderStore();
   const [modalVisible, setModalVisible] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState(null);
+  const [dropDownVisible, setDropDownVisible] = useState(false);
+  const [selectedOrderForStatus, setSelectedOrderForStatus] = useState(null);
 
 
   useEffect(() => {
     fetchOrders();
   }, [fetchOrders]);
 
-  const handleStatusChange = (orderId, newStatus) => {
-    console.log(`Order ${orderId} changed to status: ${newStatus}`);
+  const handleStatusChange = (newStatus) => {
+    // Also update the ui with changed status. 
+    if (selectedOrderForStatus) {
+      console.log(`Order ${selectedOrderForStatus} changed to status: ${newStatus}`);
+      setSelectedOrderForStatus(null);
+    }
+  };
+
+  const formatCurrency = (value) => {
+    if (!value) return '৳0.00';
+
+    if (value.toString().includes('৳')) return value;
+    total = parseFloat(value).toFixed(2);
+    return `৳${total}`;
+  };
+
+  const getStatusColor = (status) => {
+    switch (status) {
+      case 'completed': return '#28a745';
+      case 'processing': return 'rgb(0, 140, 255)';
+      case 'cancelled': return '#dc3545';
+      case 'refunded': return '#6c757d';
+      default: return '#6c757d';
+    }
+  };
+
+  const getStatusBackgroundColor = (status) => {
+    switch (status) {
+      case 'completed': return 'rgba(40, 167, 69, 0.1)';
+      case 'processing': return 'rgba(0, 140, 255, 0.1)';
+      case 'cancelled': return 'rgba(220, 53, 69, 0.1)';
+      case 'refunded': return 'rgba(108, 117, 125, 0.1)';
+      default: return 'rgba(108, 117, 125, 0.1)';
+    }
   };
 
   const renderOrderItem = ({ item }) => (
     <>
-      <TouchableOpacity onPress={() => {
-        setModalVisible(true);
-        setSelectedOrder(item);
-      }}>
-        <View style={styles.mainView}>
+      {/* show dropdown model for status */}
+      {dropDownVisible && (
+        <StatusDropdown
+          dropDownVisible={dropDownVisible}
+          setDropDownVisible={setDropDownVisible}
+          onValueChange={handleStatusChange}
+          currentStatus={orders.find(order => order.id === selectedOrderForStatus)?.status}
+        />
+      )}
 
-          <View style={styles.orderItem}>
-
-            <View style={styles.leftView}>
-              <Text style={styles.orderDate}>Date: {item.date_created ? new Date(item.date_created).toLocaleDateString() : 'N/A'}</Text>
-              <Text style={styles.orderId}>Order ID: {item.id}</Text>
-              <Text style={styles.orderName}>Customer: {item.billing?.first_name} {item.billing?.last_name}</Text>
-              <View style={styles.rightRow}>
-                <View style={styles.statusContainer}>
-                  <Text style={styles.rightLabel}>Status:</Text>
-                  <Picker
-                    selectedValue={item.status}
-                    style={styles.picker}
-                    onValueChange={(value) => handleStatusChange(item.id, value)}
-                    mode="dropdown"
-                  >
-                    <Picker.Item label="Pending" value="pending" />
-                    <Picker.Item label="Completed" value="completed" />
-                    <Picker.Item label="Cancelled" value="cancelled" />
-                    <Picker.Item label="Refunded" value="refunded" />
-                  </Picker>
-                </View>
-              </View>
+      <TouchableOpacity
+        style={styles.orderItemTouchable}
+        onPress={() => {
+          setModalVisible(true);
+          setSelectedOrder(item);
+        }}
+        activeOpacity={0.7}
+      >
+        <View style={styles.orderCard}>
+          <View style={styles.orderHeader}>
+            <View>
+              <Text style={styles.orderDate}>
+                {item.date_created ? new Date(item.date_created).toLocaleDateString() : 'N/A'}
+              </Text>
+              <Text style={styles.orderId}>Order : {item.id}</Text>
             </View>
 
-            <View style={styles.rightView}>
-              <View style={styles.rightRow}>
-                <Text style={styles.rightLabel}>SKU:</Text>
-                <Text style={styles.rightValue}>
-                  {item.line_items && item.line_items.length > 0 ?
-                    item.line_items.map(lineItem => lineItem.sku).filter(sku => sku).join(', ') : ''}
+            {/* <StatusDropdown
+            selectedValue={item.status}
+            onValueChange={(value) => handleStatusChange(item.id, value)}
+          /> */}
+            <TouchableOpacity
+              onPress={() => {
+                setSelectedOrderForStatus(item.id);
+                setDropDownVisible(true);
+              }}
+            >
+              <View style={[
+                styles.statusBadge,
+                { backgroundColor: getStatusBackgroundColor(item.status) }
+              ]}>
+                <Text style={[styles.statusText, { color: getStatusColor(item.status) }]}>
+                  {item.status?.charAt(0).toUpperCase() + item.status?.slice(1)}
                 </Text>
               </View>
-
-              <View style={styles.rightRow}>
-                <Text style={styles.totalLabel}>Total:</Text>
-                <Text style={[styles.totalValue, { color: '#007bff' }]}>{item.total}</Text>
-              </View>
-
-            </View>
+            </TouchableOpacity>
 
           </View>
 
-        </View >
+          {/* <View style={styles.divider} /> */}
 
-      </TouchableOpacity>
-      <Modal
-        visible={modalVisible}
-        hardwareAccelerated={true}
-        animationType='fade'
-        transparent={true}
-        onRequestClose={() => {
-          setModalVisible(false);
-          setSelectedOrder(null);
-        }}
-      >
-        <View style={styles.modalBackground}>
-          <View style={styles.modalContainer}>
-            {selectedOrder && (
-              <>
-                <Text style={styles.orderDate}>
-                  Date: {selectedOrder.date_created ? new Date(selectedOrder.date_created).toLocaleDateString() : 'N/A'}
+          <View style={styles.orderContent}>
+            <View style={styles.customerInfo}>
+              <FontAwesome name="user" size={16} color="#666" style={styles.icon} />
+              <Text style={styles.customerName}>
+                {item.billing?.first_name} {item.billing?.last_name}
+              </Text>
+            </View>
+
+            <View style={styles.skuInfo}>
+
+              <FontAwesome name="tag" size={16} color="#666" style={styles.icon} />
+              {item.line_items && item.line_items.length > 0 && item.line_items[0].sku ? (
+                <Text style={styles.skuText} numberOfLines={1}>
+                  {item.line_items.map(lineItem => lineItem.sku).filter(sku => sku).join(', ')}
                 </Text>
-                <Text style={styles.orderId}>Order ID: {selectedOrder.id}</Text>
-                <Text style={styles.orderName}>
-                  Customer: {selectedOrder.billing?.first_name} {selectedOrder.billing?.last_name}
-                </Text>
-                <Text style={styles.orderEmail}>Email: {selectedOrder.billing?.email}</Text>
-                <Text style={styles.orderPhone}>Phone: {selectedOrder.billing?.phone}</Text>
-                <Text style={styles.orderAddress}>
-                  Address: {[selectedOrder.billing?.address_1, selectedOrder.billing?.address_2, selectedOrder.billing?.city, selectedOrder.billing?.state, selectedOrder.billing?.postcode, selectedOrder.billing?.country]
-                    .filter(Boolean).join(', ')}
-                </Text>
+              ) : <Text style={styles.skuText}>N/A</Text>}
 
-                {/* Order Items Table */}
-                <Text style={styles.sectionTitle}>Order Items : </Text>
-                <View style={styles.tableHeader}>
-                  <Text style={styles.tableHeaderText}>Product</Text>
-                  <Text style={styles.tableHeaderText}>SKU</Text>
-                  <Text style={styles.tableHeaderText}>Qty</Text>
-                  <Text style={styles.tableHeaderText}>Price</Text>
-                  <Text style={styles.tableHeaderText}>Total</Text>
-                </View>
+            </View>
 
-                {selectedOrder.line_items?.map((item, index) => (
-                  <View key={index} style={styles.tableRow}>
-                    <Text style={styles.tableCell}>{item.name}</Text>
-                    <Text style={styles.tableCell}>{item.sku || '-'}</Text>
-                    <Text style={styles.tableCell}>{item.quantity}</Text>
-                    <Text style={styles.tableCell}>{item.price}</Text>
-                    <Text style={styles.tableCell}>
-                      {(parseFloat(item.quantity) * parseFloat(item.price)).toFixed(2)}
-                    </Text>
-                  </View>
-                ))}
 
-                <Button
-                  title="Close"
-                  onPress={() => {
-                    setModalVisible(false);
-                    setSelectedOrder(null);
-                  }}
-                />
-              </>
-            )}
+            <View style={styles.orderFooter}>
+              <View style={styles.totalContainer}>
+                <Text style={styles.totalLabel}>Total:</Text>
+                <Text style={styles.totalValue}>{formatCurrency(item.total)}</Text>
+              </View>
+
+              <View style={styles.statusDropdownContainer}>
+                {/* <Text style={styles.statusLabel}>Status:</Text>
+              <View style={styles.pickerContainer}>
+                <Picker
+                  selectedValue={item.status}
+                  style={styles.picker}
+                  onValueChange={(value) => handleStatusChange(item.id, value)}
+                  mode="dropdown"
+                >
+                  <Picker.Item label="Processing" value="processing" />
+                  <Picker.Item label="Completed" value="completed" />
+                  <Picker.Item label="Cancelled" value="cancelled" />
+                  <Picker.Item label="Refunded" value="refunded" />
+                </Picker>
+              </View> */}
+              </View>
+            </View>
           </View>
         </View>
-      </Modal>
-
-
-
+      </TouchableOpacity>
     </>
-
   );
 
   if (loading) {
     return (
       <View style={styles.centered}>
-        <ActivityIndicator size="large" color="#0000ff" />
-        <Text>Loading orders...</Text>
+        <ActivityIndicator size="large" color="#0676D1" />
+        <Text style={styles.loadingText}>Loading orders...</Text>
       </View>
     );
   }
@@ -154,7 +169,9 @@ const Order = () => {
   if (error) {
     return (
       <View style={styles.centered}>
-        <Text style={styles.errorText}>Error loading orders: {error.message}</Text>
+        <FontAwesome name="exclamation-circle" size={40} color="#dc3545" style={styles.errorIcon} />
+        <Text style={styles.errorText}>Error loading orders</Text>
+        <Text style={styles.errorMessage}>{error.message}</Text>
       </View>
     );
   }
@@ -164,7 +181,8 @@ const Order = () => {
       <SafeAreaView style={styles.container}>
         {orders.length === 0 ? (
           <View style={styles.centered}>
-            <Text>No orders found.</Text>
+            <FontAwesome name="inbox" size={50} color="#6c757d" style={styles.emptyIcon} />
+            <Text style={styles.emptyText}>No orders found</Text>
           </View>
         ) : (
           <FlatList
@@ -172,177 +190,178 @@ const Order = () => {
             renderItem={renderOrderItem}
             keyExtractor={(item) => item.id.toString()}
             contentContainerStyle={styles.listContent}
+            showsVerticalScrollIndicator={false}
           />
         )}
+        <Modal
+          visible={modalVisible}
+          hardwareAccelerated={true}
+          animationType='fade'
+          transparent={true}
+          onRequestClose={() => {
+            setModalVisible(false);
+            setSelectedOrder(null);
+          }}
+        >
+          <OrderModelView
+            selectedOrder={selectedOrder}
+            setModalVisible={setModalVisible}
+            setSelectedOrder={setSelectedOrder}
+          />
+        </Modal>
       </SafeAreaView>
     </SafeAreaProvider>
-
   );
 };
 
-export default Order;
-
 const styles = StyleSheet.create({
+  // Main container styles
   container: {
     flex: 1,
-    padding: 12,
-    backgroundColor: '#f8f8f8',
+    backgroundColor: '#f5f7fa',
+    paddingHorizontal: 16,
+    paddingTop: 12,
   },
   centered: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    padding: 20,
   },
-  title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    marginBottom: 16,
+  loadingText: {
+    marginTop: 12,
+    fontSize: 16,
+    color: '#555',
   },
-  mainView: {
-    flex: 1,
-    flexDirection: 'row',
-    backgroundColor: '#fff',
-    padding: 16,
+  errorIcon: {
     marginBottom: 12,
-    borderRadius: 8,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
   },
-  orderItem: {
-    flex: 1,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-  orderId: {
+  errorText: {
     fontSize: 18,
     fontWeight: 'bold',
+    color: '#dc3545',
+    marginBottom: 8,
   },
-  orderDate: {
+  errorMessage: {
     fontSize: 14,
     color: '#666',
-    marginTop: 4,
+    textAlign: 'center',
   },
-  orderName: {
-    fontSize: 16,
-    marginTop: 4,
+  emptyIcon: {
+    marginBottom: 16,
   },
-  leftView: {
-    flex: 1,
-    paddingRight: 10,
-  },
-  rightView: {
-    flexDirection: 'column',
-    alignItems: 'flex-start',
-    justifyContent: 'center',
-    minWidth: 150,
-  },
-  rightRow: {
-    flexDirection: 'row',
-    marginVertical: 2,
-    alignItems: 'center',
-  },
-  rightLabel: {
-    width: 60,
-    fontSize: 16,
-  },
-  rightValue: {
-    fontSize: 16,
-  },
-
-  errorText: {
-    color: 'red',
-    fontSize: 16,
+  emptyText: {
+    fontSize: 18,
+    color: '#6c757d',
   },
   listContent: {
     paddingBottom: 16,
   },
-  iconColumn: {
-    flexDirection: 'column',
-    justifyContent: 'space-around',
+
+  // Order card styles
+  orderItemTouchable: {
+    marginVertical: 8,
+  },
+  orderCard: {
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 3,
+    overflow: 'hidden',
+  },
+  orderHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
-    marginLeft: 10,
+    padding: 16,
+    backgroundColor: '#fff',
+  },
+  orderDate: {
+    fontSize: 12,
+    color: '#6c757d',
+    marginBottom: 4,
+  },
+  orderId: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#343a40',
+  },
+  statusBadge: {
+    paddingVertical: 4,
+    paddingHorizontal: 12,
+    borderRadius: 20,
+  },
+  statusText: {
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  divider: {
+    height: 1,
+    backgroundColor: '#e9ecef',
+  },
+  orderContent: {
+    paddingHorizontal: 16,
+  },
+  customerInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  icon: {
+    marginRight: 8,
+  },
+  customerName: {
+    fontSize: 16,
+    color: '#343a40',
+    fontWeight: '500',
+    flex: 1,
+  },
+  skuInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 2,
+  },
+  skuText: {
+    fontSize: 14,
+    color: '#6c757d',
+    flex: 1,
+  },
+  orderFooter: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 6,
+  },
+  totalContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   totalLabel: {
-    width: 60,
-    fontSize: 16,
-    fontWeight: 'bold'
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#343a40',
+    marginRight: 6,
+    marginBottom: 16
   },
   totalValue: {
     fontSize: 16,
-    fontWeight: 'bold'
+    fontWeight: '700',
+    color: '#0676D1',
+    marginBottom: 16
   },
-
-  statusContainer: {
+  statusDropdownContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    //marginTop: 4,
   },
-  picker: {
-    //fontSize: 4,
-    width: 160,
-    height: 55,
-    color: 'rgb(28, 122, 0)',
-  },
-
-  modalBackground: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: 'rgba(0, 0, 0, 0.1)',
-  },
-  modalContainer: {
-    backgroundColor: 'white',
-    padding: 20,
-    borderRadius: 10,
-    width: '90%',
-    maxWidth: 400,
-  },
-  orderEmail: {
+  statusLabel: {
     fontSize: 16,
-    marginTop: 4,
+    color: '#495057',
+    marginRight: 6,
+    marginBottom: 16
   },
-  orderPhone: {
-    fontSize: 16,
-    marginTop: 4,
-  },
-  orderAddress: {
-    fontSize: 16,
-    marginTop: 4,
-  },
-  sectionTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    marginVertical: 10,
-  },
-
-  tableHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    borderBottomWidth: 1,
-    borderColor: '#ccc',
-    paddingVertical: 5,
-  },
-
-  tableHeaderText: {
-    flex: 1,
-    fontWeight: 'bold',
-    fontSize: 14,
-  },
-
-  tableRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingVertical: 4,
-    borderBottomWidth: 0.5,
-    borderColor: '#eee',
-  },
-
-  tableCell: {
-    flex: 1,
-    fontSize: 13,
-  },
-
 });
+
+export default Order;

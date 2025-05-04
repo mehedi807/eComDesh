@@ -13,6 +13,7 @@ import Login from './src/pages/Login'
 import Signup from './src/pages/Signup'
 import Ionicons from 'react-native-vector-icons/Ionicons';
 
+
 // Navigators
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
