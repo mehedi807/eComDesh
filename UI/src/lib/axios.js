@@ -9,12 +9,13 @@ const wooApi = axios.create({
   },
   headers: {
     'Content-Type': 'application/json',
+    'Accept': 'application/json',
   },
 });
 
 const nodeApi = axios.create({
-  //baseURL: 'http://192.168.10.189:5001/api',   //on android
-  baseURL: 'http://localhost:5001/api',        //on local 
+  baseURL: 'http://172.20.10.8:5001/api',   //on android
+  //baseURL: 'http://localhost:5001/api',        //on local 
   withCredentials: true,
 });
 

@@ -32,7 +32,7 @@ export const useAuthStore = create(
                     const res = await nodeApi.post("/auth/signup", data);
                     set({ authUser: res.data });
                     Alert.alert("Success", "Account created successfully");
-                    console.log(res.data);
+                    //console.log(res.data);
                     return true;
                 } catch (error) {
                     const errorMessage = error.response?.data?.message || "Signup failed. Please try again.";
@@ -48,7 +48,7 @@ export const useAuthStore = create(
                     const res = await nodeApi.post("/auth/login", data);
                     set({ authUser: res.data });
                     Alert.alert("Success", "Logged In successfully");
-                    console.log(res.data);
+                    //console.log(res.data);
                     return true;
                 } catch (error) {
                     console.log("Login error:", error.response?.data || error.message);
@@ -63,7 +63,7 @@ export const useAuthStore = create(
             logout: async () => {
                 set({ isloading: true })
                 try {
-                    await nodeApi.post('/auth/logout');
+                    //await nodeApi.post("/auth/logout");
                     set({ authUser: null });
                     Alert.alert("Success", "Logged out Successful");
                 } catch (error) {

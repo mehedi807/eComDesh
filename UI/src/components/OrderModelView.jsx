@@ -5,10 +5,43 @@ import { FontAwesome } from '@expo/vector-icons';
 const OrderModelView = ({ selectedOrder, setModalVisible, setSelectedOrder }) => {
     const [isModelEdited, setIsModelEdited] = useState(false);
     const [orderNotes, setOrderNotes] = useState('');
+    const [isEditingAddress, setIsEditingAddress] = useState(false);
+
+    const [addressForm, setAddressForm] = useState({
+        address_1: '',
+        address_2: '',
+        city: '',
+        state: '',
+        postcode: '',
+        country: ''
+    });
+
+    const handleAddressChange = (field, value) => {
+        setAddressForm(prev => ({ ...prev, [field]: value }));
+        setIsModelEdited(true);
+    };
 
     const handleNotesChange = (text) => {
         setOrderNotes(text);
         setIsModelEdited(true);
+    };
+
+    const openAddressEditor = () => {
+        setAddressForm({
+            address_1: selectedOrder.billing?.address_1 || '',
+            address_2: selectedOrder.billing?.address_2 || '',
+            city: selectedOrder.billing?.city || '',
+            state: selectedOrder.billing?.state || '',
+            postcode: selectedOrder.billing?.postcode || '',
+            country: selectedOrder.billing?.country || ''
+        });
+        setIsEditingAddress(true);
+    };
+
+    const saveAddressChanges = () => {
+        // API call to update address would go here
+        setIsEditingAddress(false);
+        setIsModelEdited(false);
     };
 
     const formatCurrency = (value) => {
@@ -85,25 +118,89 @@ const OrderModelView = ({ selectedOrder, setModalVisible, setSelectedOrder }) =>
                                 </Text>
                             </View>
 
+                            {/* Edit Address/cancle edit */}
                             <View style={styles.addressSection}>
                                 <View style={styles.addressHeader}>
                                     <Text style={styles.sectionTitle}>Shipping Address</Text>
-                                    <TouchableOpacity>
-                                        <Text style={styles.editLink}>Edit Address</Text>
-                                    </TouchableOpacity>
+                                    {!isEditingAddress && (
+                                        <TouchableOpacity onPress={openAddressEditor}>
+                                            <Text style={styles.editLink}>Edit Address</Text>
+                                        </TouchableOpacity>
+                                    )}
+                                    {isEditingAddress && (
+                                        <TouchableOpacity onPress={() => { setIsEditingAddress(false); setIsModelEdited(false) }}>
+                                            <Text style={styles.cancleEditLink}>Cancle Edit</Text>
+                                        </TouchableOpacity>
+                                    )}
+
+
                                 </View>
 
-                                <Text style={styles.addressText}>
+                                {isEditingAddress ? (
+                                    <View style={styles.addressEditForm}>
+                                        <View style={styles.addressInputRow}>
+                                            <Text style={styles.addressLabel}>Address Line 1:</Text>
+                                            <TextInput
+                                                style={styles.addressInput}
+                                                value={addressForm.address_1}
+                                                onChangeText={(text) => handleAddressChange('address_1', text)}
+                                            />
+                                        </View>
+                                        <View style={styles.addressInputRow}>
+                                            <Text style={styles.addressLabel}>Address Line 2:</Text>
+                                            <TextInput
+                                                style={styles.addressInput}
+                                                value={addressForm.address_2}
+                                                onChangeText={(text) => handleAddressChange('address_2', text)}
+                                            />
+                                        </View>
+                                        <View style={styles.addressInputRow}>
+                                            <Text style={styles.addressLabel}>City:</Text>
+                                            <TextInput
+                                                style={styles.addressInput}
+                                                value={addressForm.city}
+                                                onChangeText={(text) => handleAddressChange('city', text)}
+                                            />
+                                        </View>
+                                        <View style={styles.addressInputRow}>
+                                            <Text style={styles.addressLabel}>State:</Text>
+                                            <TextInput
+                                                style={styles.addressInput}
+                                                value={addressForm.state}
+                                                onChangeText={(text) => handleAddressChange('state', text)}
+                                            />
+                                        </View>
+                                        <View style={styles.addressInputRow}>
+                                            <Text style={styles.addressLabel}>Postcode:</Text>
+                                            <TextInput
+                                                style={styles.addressInput}
+                                                value={addressForm.postcode}
+                                                onChangeText={(text) => handleAddressChange('postcode', text)}
+                                            />
+                                        </View>
+                                        <View style={styles.addressInputRow}>
+                                            <Text style={styles.addressLabel}>Country:</Text>
+                                            <TextInput
+                                                style={styles.addressInput}
+                                                value={addressForm.country}
+                                                onChangeText={(text) => handleAddressChange('country', text)}
+                                            />
+                                        </View>
 
-                                    {[
-                                        selectedOrder.billing?.address_1,
-                                        selectedOrder.billing?.address_2,
-                                        selectedOrder.billing?.city,
-                                        selectedOrder.billing?.state,
-                                        selectedOrder.billing?.postcode,
-                                        selectedOrder.billing?.country
-                                    ].filter(Boolean).join(', ')}
-                                </Text>
+                                    </View>
+                                ) : (
+                                    <Text style={styles.addressText}>
+
+                                        {[
+                                            selectedOrder.billing?.address_1,
+                                            selectedOrder.billing?.address_2,
+                                            selectedOrder.billing?.city,
+                                            selectedOrder.billing?.state,
+                                            selectedOrder.billing?.postcode,
+                                            selectedOrder.billing?.country
+                                        ].filter(Boolean).join(', ')}
+                                    </Text>
+                                )}
                             </View>
 
                             <View style={styles.orderItemsSection}>
@@ -159,9 +256,9 @@ const OrderModelView = ({ selectedOrder, setModalVisible, setSelectedOrder }) =>
                             <View style={styles.notesSection}>
                                 <View style={styles.notesHeader}>
                                     <Text style={styles.sectionTitle}>Order Notes</Text>
-                                    <TouchableOpacity>
+                                    {/* <TouchableOpacity>
                                         <Text style={styles.editLink}>Edit Note</Text>
-                                    </TouchableOpacity>
+                                    </TouchableOpacity> */}
                                 </View>
                                 <TextInput
                                     style={styles.notesInput}
@@ -181,6 +278,7 @@ const OrderModelView = ({ selectedOrder, setModalVisible, setSelectedOrder }) =>
                                 onPress={() => {
                                     setIsModelEdited(false)
                                     Keyboard.dismiss();
+                                    if (isEditingAddress) saveAddressChanges();
                                 }}
                                 activeOpacity={0.8}
                             >
@@ -195,7 +293,6 @@ const OrderModelView = ({ selectedOrder, setModalVisible, setSelectedOrder }) =>
                                 onPress={() => {
                                     setModalVisible(false);
                                     setSelectedOrder(null);
-
                                 }}
                                 activeOpacity={0.7}
                             >
@@ -207,7 +304,6 @@ const OrderModelView = ({ selectedOrder, setModalVisible, setSelectedOrder }) =>
                                 onPress={() => {
                                     setModalVisible(false);
                                     setSelectedOrder(null);
-
                                 }}
                                 activeOpacity={0.7}
                             >
@@ -219,7 +315,7 @@ const OrderModelView = ({ selectedOrder, setModalVisible, setSelectedOrder }) =>
                     </>
                 )}
             </View>
-        </View>
+        </View >
 
 
     )
@@ -306,6 +402,13 @@ const styles = StyleSheet.create({
         color: '#0676D1',
         fontSize: 14,
         fontWeight: '500',
+        paddingRight: 5
+    },
+    cancleEditLink: {
+        color: 'rgb(234, 12, 12)',
+        fontSize: 14,
+        fontWeight: '500',
+        paddingRight: 10
     },
     addressText: {
         fontSize: 14,
@@ -423,5 +526,32 @@ const styles = StyleSheet.create({
     },
     buttonIcon: {
         marginRight: 8,
+    },
+    // Address editing styles
+    addressEditForm: {
+        marginBottom: 16,
+    },
+    addressInputRow: {
+        flexDirection: 'row',
+        marginBottom: 8,
+    },
+    addressLabel: {
+        flex: 0.3,
+        fontSize: 14,
+        color: '#495057',
+        marginBottom: 4,
+    },
+    addressInput: {
+        flex: 0.7,
+        borderWidth: 1,
+        borderColor: '#e9ecef',
+        borderRadius: 8,
+        padding: 8,
+        fontSize: 14,
+        color: '#495057',
+    },
+    addressButtonRow: {
+        flexDirection: 'row',
+        marginTop: 12,
     },
 });

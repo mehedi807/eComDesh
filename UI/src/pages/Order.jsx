@@ -1,11 +1,12 @@
-import { StyleSheet, Text, View, FlatList, ActivityIndicator, TouchableOpacity, Modal, SafeAreaView, TextInput, ScrollView } from 'react-native';
+import { StyleSheet, Text, View, FlatList, ActivityIndicator, TouchableOpacity, Modal, SafeAreaView, TextInput, ScrollView, Button, StatusBar as RNStatusBar, Keyboard } from 'react-native';
 import React, { useEffect, useState } from 'react';
 import useOrderStore from '../store/useOrderStore';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
-import { FontAwesome } from '@expo/vector-icons';
+import { FontAwesome, Ionicons, MaterialIcons } from '@expo/vector-icons';
+import { StatusBar } from 'react-native';
 import OrderModelView from '../components/OrderModelView';
 import StatusDropdown from '../components/StatusDropdown';
-
+import { useNavigation } from '@react-navigation/native';
 
 const Order = () => {
   const { orders, loading, error, fetchOrders } = useOrderStore();
@@ -13,14 +14,20 @@ const Order = () => {
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [dropDownVisible, setDropDownVisible] = useState(false);
   const [selectedOrderForStatus, setSelectedOrderForStatus] = useState(null);
+  const [isSearchVisible, setIsSearchVisible] = useState(false);
+  const [isFilterVisible, setIsFilterVisible] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedStatus, setSelectedStatus] = useState('all');
+  const [dateRange, setDateRange] = useState({ start: null, end: null });
 
+  const navigation = useNavigation();
 
   useEffect(() => {
     fetchOrders();
   }, [fetchOrders]);
 
   const handleStatusChange = (newStatus) => {
-    // Also update the ui with changed status. 
+    // Also update the UI with changed status
     if (selectedOrderForStatus) {
       console.log(`Order ${selectedOrderForStatus} changed to status: ${newStatus}`);
       setSelectedOrderForStatus(null);
@@ -31,14 +38,14 @@ const Order = () => {
     if (!value) return '৳0.00';
 
     if (value.toString().includes('৳')) return value;
-    total = parseFloat(value).toFixed(2);
+    const total = parseFloat(value).toFixed(2);
     return `৳${total}`;
   };
 
   const getStatusColor = (status) => {
     switch (status) {
       case 'completed': return '#28a745';
-      case 'processing': return 'rgb(0, 140, 255)';
+      case 'processing': return '#0676D1';
       case 'cancelled': return '#dc3545';
       case 'refunded': return '#6c757d';
       default: return '#6c757d';
@@ -48,25 +55,145 @@ const Order = () => {
   const getStatusBackgroundColor = (status) => {
     switch (status) {
       case 'completed': return 'rgba(40, 167, 69, 0.1)';
-      case 'processing': return 'rgba(0, 140, 255, 0.1)';
+      case 'processing': return 'rgba(6, 118, 209, 0.1)';
       case 'cancelled': return 'rgba(220, 53, 69, 0.1)';
       case 'refunded': return 'rgba(108, 117, 125, 0.1)';
       default: return 'rgba(108, 117, 125, 0.1)';
     }
   };
 
+  const toggleSearch = () => {
+    setIsSearchVisible(!isSearchVisible);
+    // Hide filters when closing search
+    if (isSearchVisible) {
+      setIsFilterVisible(false);
+      setSelectedStatus('all')
+    }
+  };
+
+  const toggleFilter = () => {
+    setIsFilterVisible(!isFilterVisible);
+  };
+
+  const pageHeader = () => {
+    return (
+      <View style={styles.pageHeader}>
+        <View style={styles.left}>
+          <TouchableOpacity
+            style={styles.menuIcon}
+            onPress={() => navigation.openDrawer()}
+          >
+            <Ionicons name="menu-outline" size={26} color="#333" />
+          </TouchableOpacity>
+          <Text style={styles.title}>Orders</Text>
+        </View>
+
+        <View style={styles.right}>
+          <TouchableOpacity
+            style={styles.headerIconButton}
+            onPress={toggleSearch}
+          >
+            <Ionicons
+              name={isSearchVisible ? "close-outline" : "search-outline"}
+              size={24}
+              color="#333"
+            />
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.headerIconButton}>
+            <Ionicons name="notifications-outline" size={24} color="#333" />
+          </TouchableOpacity>
+        </View>
+      </View >
+    );
+  };
+
+  const calculateStatusCounts = () => {
+    const counts = {
+      all: orders.length,
+      completed: 0,
+      processing: 0,
+      cancelled: 0,
+      refunded: 0,
+    };
+
+    orders.forEach(order => {
+      if (order.status in counts) {
+        counts[order.status]++;
+      }
+    });
+
+    return counts;
+  };
+
+  const renderFilterOptions = () => {
+    Keyboard.dismiss();
+    const statusCounts = calculateStatusCounts();
+    return (
+      <View style={styles.filterOptions}>
+        <View style={styles.filterSection}>
+          <Text style={styles.filterLabel}>Status</Text>
+          <View style={styles.statusFilterContainer}>
+            {['all', 'completed', 'processing', 'cancelled', 'refunded'].map((status) => (
+              <TouchableOpacity
+                key={status}
+                style={[
+                  styles.statusFilterChip,
+                  selectedStatus === status && {
+                    backgroundColor: status === 'all' ? '#e9ecef' : getStatusBackgroundColor(status),
+                    borderColor: status === 'all' ? '#ced4da' : getStatusColor(status),
+                  }
+                ]}
+                onPress={() => setSelectedStatus(status)}
+              >
+                <Text style={[
+                  styles.statusFilterText,
+                  selectedStatus === status && {
+                    color: status === 'all' ? '#495057' : getStatusColor(status),
+                    fontWeight: '600'
+                  }
+                ]}>
+                  {`${status.charAt(0).toUpperCase() + status.slice(1)} (${statusCounts[status]})`}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </View>
+
+        {/* <View style={styles.filterSection}>
+          <Text style={styles.filterLabel}>Date Range</Text>
+          <View style={styles.dateFilterContainer}>
+            <TouchableOpacity style={styles.datePickerButton}>
+              <Ionicons name="calendar-outline" size={18} color="#666" style={{ marginRight: 4 }} />
+              <Text style={styles.datePickerText}>
+                {dateRange.start ? new Date(dateRange.start).toLocaleDateString() : 'Start Date'}
+              </Text>
+            </TouchableOpacity>
+
+            <Text style={styles.dateRangeSeparator}>to</Text>
+
+            <TouchableOpacity style={styles.datePickerButton}>
+              <Ionicons name="calendar-outline" size={18} color="#666" style={{ marginRight: 4 }} />
+              <Text style={styles.datePickerText}>
+                {dateRange.end ? new Date(dateRange.end).toLocaleDateString() : 'End Date'}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        <View style={styles.filterActions}>
+          <TouchableOpacity style={styles.resetFilterButton}>
+            <Text style={styles.resetFilterText}>Reset</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.applyFilterButton}>
+            <Text style={styles.applyFilterText}>Apply Filters</Text>
+          </TouchableOpacity> */}
+        {/* </View> */}
+      </View >
+    );
+  };
+
   const renderOrderItem = ({ item }) => (
     <>
-      {/* show dropdown model for status */}
-      {dropDownVisible && (
-        <StatusDropdown
-          dropDownVisible={dropDownVisible}
-          setDropDownVisible={setDropDownVisible}
-          onValueChange={handleStatusChange}
-          currentStatus={orders.find(order => order.id === selectedOrderForStatus)?.status}
-        />
-      )}
-
       <TouchableOpacity
         style={styles.orderItemTouchable}
         onPress={() => {
@@ -81,13 +208,9 @@ const Order = () => {
               <Text style={styles.orderDate}>
                 {item.date_created ? new Date(item.date_created).toLocaleDateString() : 'N/A'}
               </Text>
-              <Text style={styles.orderId}>Order : {item.id}</Text>
+              <Text style={styles.orderId}>Order: #{item.id}</Text>
             </View>
 
-            {/* <StatusDropdown
-            selectedValue={item.status}
-            onValueChange={(value) => handleStatusChange(item.id, value)}
-          /> */}
             <TouchableOpacity
               onPress={() => {
                 setSelectedOrderForStatus(item.id);
@@ -103,10 +226,9 @@ const Order = () => {
                 </Text>
               </View>
             </TouchableOpacity>
-
           </View>
 
-          {/* <View style={styles.divider} /> */}
+          <View style={styles.divider} />
 
           <View style={styles.orderContent}>
             <View style={styles.customerInfo}>
@@ -117,38 +239,18 @@ const Order = () => {
             </View>
 
             <View style={styles.skuInfo}>
-
               <FontAwesome name="tag" size={16} color="#666" style={styles.icon} />
               {item.line_items && item.line_items.length > 0 && item.line_items[0].sku ? (
                 <Text style={styles.skuText} numberOfLines={1}>
                   {item.line_items.map(lineItem => lineItem.sku).filter(sku => sku).join(', ')}
                 </Text>
               ) : <Text style={styles.skuText}>N/A</Text>}
-
             </View>
-
 
             <View style={styles.orderFooter}>
               <View style={styles.totalContainer}>
                 <Text style={styles.totalLabel}>Total:</Text>
                 <Text style={styles.totalValue}>{formatCurrency(item.total)}</Text>
-              </View>
-
-              <View style={styles.statusDropdownContainer}>
-                {/* <Text style={styles.statusLabel}>Status:</Text>
-              <View style={styles.pickerContainer}>
-                <Picker
-                  selectedValue={item.status}
-                  style={styles.picker}
-                  onValueChange={(value) => handleStatusChange(item.id, value)}
-                  mode="dropdown"
-                >
-                  <Picker.Item label="Processing" value="processing" />
-                  <Picker.Item label="Completed" value="completed" />
-                  <Picker.Item label="Cancelled" value="cancelled" />
-                  <Picker.Item label="Refunded" value="refunded" />
-                </Picker>
-              </View> */}
               </View>
             </View>
           </View>
@@ -179,6 +281,41 @@ const Order = () => {
   return (
     <SafeAreaProvider>
       <SafeAreaView style={styles.container}>
+
+        {pageHeader()}
+
+        {isSearchVisible && (
+          <View style={styles.searchContainer}>
+            <View style={styles.searchInputContainer}>
+              <Ionicons name="search" size={20} color="#666" style={styles.searchInputIcon} />
+              <TextInput
+                style={styles.searchInput}
+                placeholder="Search by order ID, customer name..."
+                value={searchQuery}
+                onChangeText={setSearchQuery}
+                autoFocus
+              />
+              {searchQuery ? (
+                <TouchableOpacity onPress={() => setSearchQuery('')}>
+                  <Ionicons name="close-circle" size={20} color="#666" />
+                </TouchableOpacity>
+              ) : null}
+            </View>
+
+            <TouchableOpacity
+              style={styles.filterToggleButton}
+              onPress={toggleFilter}
+            >
+              <Ionicons name="options-outline" size={20} color="#0676D1" />
+              <Text style={styles.filterToggleText}>
+                {isFilterVisible ? "Hide Filters" : "Filters"}
+              </Text>
+            </TouchableOpacity>
+
+            {isFilterVisible && renderFilterOptions()}
+          </View>
+        )}
+
         {orders.length === 0 ? (
           <View style={styles.centered}>
             <FontAwesome name="inbox" size={50} color="#6c757d" style={styles.emptyIcon} />
@@ -186,13 +323,24 @@ const Order = () => {
           </View>
         ) : (
           <FlatList
-            data={orders}
+            data={orders.filter(order => {
+              const matchesSearch =
+                order.id.toString().includes(searchQuery) ||
+                order.billing?.first_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                order.billing?.last_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                order.billing?.phone?.toLowerCase().includes(searchQuery.toLowerCase());
+
+              const matchesStatus = selectedStatus === 'all' || order.status === selectedStatus;
+
+              return matchesSearch && matchesStatus;
+            })}
             renderItem={renderOrderItem}
             keyExtractor={(item) => item.id.toString()}
             contentContainerStyle={styles.listContent}
             showsVerticalScrollIndicator={false}
           />
         )}
+
         <Modal
           visible={modalVisible}
           hardwareAccelerated={true}
@@ -209,6 +357,22 @@ const Order = () => {
             setSelectedOrder={setSelectedOrder}
           />
         </Modal>
+
+        <Modal
+          visible={dropDownVisible}
+          hardwareAccelerated={true}
+          animationType='fade'
+          transparent={true}
+          onRequestClose={() => setDropDownVisible(false)}
+        >
+          <StatusDropdown
+            dropDownVisible={dropDownVisible}
+            setDropDownVisible={setDropDownVisible}
+            onValueChange={handleStatusChange}
+            currentStatus={orders.find(order => order.id === selectedOrderForStatus)?.status}
+          />
+        </Modal>
+
       </SafeAreaView>
     </SafeAreaProvider>
   );
@@ -219,8 +383,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#f5f7fa',
-    paddingHorizontal: 16,
-    paddingTop: 12,
   },
   centered: {
     flex: 1,
@@ -255,7 +417,170 @@ const styles = StyleSheet.create({
     color: '#6c757d',
   },
   listContent: {
-    paddingBottom: 16,
+    padding: 16,
+  },
+  // Header styles
+  pageHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: 'rgba(238, 238, 238, 0.24)',
+    paddingTop: (RNStatusBar.currentHeight || 0) + 12, //if status bar is trnsfluent
+    paddingBottom: 12,
+    paddingHorizontal: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E2E8F0',
+  },
+
+  left: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  right: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  title: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#333',
+    marginLeft: 12,
+  },
+  menuIcon: {
+    padding: 4,
+  },
+  headerIconButton: {
+    padding: 8,
+    marginLeft: 8,
+    borderRadius: 8,
+  },
+
+  // Search and filter styles
+  searchContainer: {
+    backgroundColor: '#fff',
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#eaeaea',
+  },
+  searchInputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#f2f2f7',
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    height: 44,
+  },
+  searchInputIcon: {
+    marginRight: 8,
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: 16,
+    color: '#333',
+    height: '100%',
+  },
+  filterToggleButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 12,
+    alignSelf: 'flex-start',
+  },
+  filterToggleText: {
+    marginLeft: 4,
+    color: '#0676D1',
+    fontWeight: '500',
+    fontSize: 15,
+  },
+  filterOptions: {
+    marginTop: 16,
+    backgroundColor: '#f8f9fa',
+    borderRadius: 12,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: '#e9ecef',
+  },
+  filterSectionTitle: {
+    fontSize: 17,
+    fontWeight: '600',
+    color: '#343a40',
+    marginBottom: 16,
+  },
+  filterSection: {
+    marginBottom: 20,
+  },
+  filterLabel: {
+    fontSize: 15,
+    fontWeight: '500',
+    color: '#495057',
+    marginBottom: 8,
+  },
+  statusFilterContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+  },
+  statusFilterChip: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
+    marginRight: 8,
+    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: '#dee2e6',
+    backgroundColor: 'transparent',
+  },
+  statusFilterText: {
+    fontSize: 14,
+    color: '#495057',
+  },
+  dateFilterContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  datePickerButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderWidth: 1,
+    borderColor: '#ced4da',
+    borderRadius: 8,
+    backgroundColor: '#fff',
+    flex: 1,
+  },
+  datePickerText: {
+    fontSize: 14,
+    color: '#495057',
+  },
+  dateRangeSeparator: {
+    marginHorizontal: 10,
+    color: '#6c757d',
+  },
+  filterActions: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    marginTop: 16,
+  },
+  resetFilterButton: {
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    marginRight: 12,
+  },
+  resetFilterText: {
+    fontSize: 15,
+    fontWeight: '500',
+    color: '#6c757d',
+  },
+  applyFilterButton: {
+    backgroundColor: '#0676D1',
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+  },
+  applyFilterText: {
+    fontSize: 15,
+    fontWeight: '500',
+    color: '#fff',
   },
 
   // Order card styles
@@ -263,7 +588,7 @@ const styles = StyleSheet.create({
     marginVertical: 8,
   },
   orderCard: {
-    backgroundColor: '#fff',
+    backgroundColor: '#FFFFFF',
     borderRadius: 12,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
@@ -276,11 +601,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    padding: 16,
-    backgroundColor: '#fff',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    backgroundColor: 'rgba(238, 238, 238, 0.24)',
   },
   orderDate: {
-    fontSize: 12,
+    fontSize: 13,
     color: '#6c757d',
     marginBottom: 4,
   },
@@ -304,6 +630,7 @@ const styles = StyleSheet.create({
   },
   orderContent: {
     paddingHorizontal: 16,
+    paddingVertical: 12,
   },
   customerInfo: {
     flexDirection: 'row',
@@ -322,7 +649,7 @@ const styles = StyleSheet.create({
   skuInfo: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 2,
+    marginBottom: 8,
   },
   skuText: {
     fontSize: 14,
@@ -333,7 +660,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginTop: 6,
+    marginTop: 8,
   },
   totalContainer: {
     flexDirection: 'row',
@@ -344,23 +671,11 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#343a40',
     marginRight: 6,
-    marginBottom: 16
   },
   totalValue: {
     fontSize: 16,
     fontWeight: '700',
     color: '#0676D1',
-    marginBottom: 16
-  },
-  statusDropdownContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  statusLabel: {
-    fontSize: 16,
-    color: '#495057',
-    marginRight: 6,
-    marginBottom: 16
   },
 });
 

@@ -2,7 +2,7 @@ import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Modal } from 'react-native';
 import { FontAwesome } from '@expo/vector-icons';
 
-const StatusDropdown = ({ dropDownVisible, setDropDownVisible, onValueChange, currentStatus }) => {
+const StatusDropdown = ({ setDropDownVisible, onValueChange, currentStatus }) => {
     const statusList = [
         { label: 'Processing', value: 'processing', icon: 'clock-o' },
         { label: 'Completed', value: 'completed', icon: 'check-circle' },
@@ -21,64 +21,58 @@ const StatusDropdown = ({ dropDownVisible, setDropDownVisible, onValueChange, cu
     };
 
     return (
-        <Modal
-            transparent={true}
-            visible={dropDownVisible}
-            animationType="fade"
-            onRequestClose={() => setDropDownVisible(false)}
+
+        <TouchableOpacity
+            style={styles.modalOverlay}
+            activeOpacity={1}
+            onPress={() => setDropDownVisible(false)}
         >
-            <TouchableOpacity
-                style={styles.modalOverlay}
-                activeOpacity={1}
-                onPress={() => setDropDownVisible(false)}
-            >
-                <View style={styles.modalContent}>
-                    <View style={styles.dropdownHeader}>
-                        <Text style={styles.dropdownTitle}>Update Order Status</Text>
-                    </View>
-
-                    {statusList.map((option) => (
-                        <TouchableOpacity
-                            key={option.value}
-                            style={[
-                                styles.optionItem,
-                                currentStatus === option.value && styles.selectedOption
-                            ]}
-                            onPress={() => {
-                                onValueChange(option.value);
-                                setDropDownVisible(false);
-                            }}
-                        >
-                            <View style={styles.optionContent}>
-                                <FontAwesome
-                                    name={option.icon}
-                                    size={16}
-                                    color={getStatusColor(option.value)}
-                                    style={styles.optionIcon}
-                                />
-                                <Text style={[
-                                    styles.optionText,
-                                    { color: getStatusColor(option.value) }
-                                ]}>
-                                    {option.label}
-                                </Text>
-                            </View>
-
-                            {currentStatus === option.value && (
-                                <FontAwesome name="check" size={16} color={getStatusColor(option.value)} />
-                            )}
-                        </TouchableOpacity>
-                    ))}
+            <View style={styles.modalContent}>
+                <View style={styles.dropdownHeader}>
+                    <Text style={styles.dropdownTitle}>Update Order Status</Text>
                 </View>
-            </TouchableOpacity>
-        </Modal>
+
+                {statusList.map((option) => (
+                    <TouchableOpacity
+                        key={option.value}
+                        style={[
+                            styles.optionItem,
+                            currentStatus === option.value && styles.selectedOption
+                        ]}
+                        onPress={() => {
+                            onValueChange(option.value);
+                            setDropDownVisible(false);
+                        }}
+                    >
+                        <View style={styles.optionContent}>
+                            <FontAwesome
+                                name={option.icon}
+                                size={16}
+                                color={getStatusColor(option.value)}
+                                style={styles.optionIcon}
+                            />
+                            <Text style={[
+                                styles.optionText,
+                                { color: getStatusColor(option.value) }
+                            ]}>
+                                {option.label}
+                            </Text>
+                        </View>
+
+                        {currentStatus === option.value && (
+                            <FontAwesome name="check" size={16} color={getStatusColor(option.value)} />
+                        )}
+                    </TouchableOpacity>
+                ))}
+            </View>
+        </TouchableOpacity >
     );
 };
 
 const styles = StyleSheet.create({
     modalOverlay: {
         flex: 1,
-        backgroundColor: 'rgba(0, 0, 0, 0.2)',
+        backgroundColor: 'rgba(0, 0, 0, 0.86)',
         justifyContent: 'center',
         alignItems: 'center',
     },
